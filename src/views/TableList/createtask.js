@@ -4,8 +4,9 @@ import { Formik, Form, Field } from "formik";
 
 import Button from "components/CustomButtons/Button";
 import { gql } from "apollo-boost";
-import { useMutation } from "@apollo/react-hooks";
+import { useMutation, useQuery } from "@apollo/react-hooks";
 import TextField from "@material-ui/core/TextField";
+
 import { makeStyles } from "@material-ui/core/styles";
 import SnackbarContent from "components/Snackbar/SnackbarContent";
 import Snackbar from "components/Snackbar/Snackbar";
@@ -24,19 +25,34 @@ const useStyles = makeStyles(theme => ({
   }
 }));
 
+const categories = gql`
+  query categories {
+    categories {
+      id
+      name
+    }
+  }
+`;
 const create_Product = gql`
   mutation createProduct(
     $name: String!
     $description: String!
     $price: Float!
+    $cat: ID
   ) {
     createProduct(
-      data: { name: $name, description: $description, price: $price }
+      data: {
+        name: $name
+        description: $description
+        price: $price
+        category: { connect: { id: $cat } }
+      }
     ) {
       id
     }
   }
 `;
+
 const Basic = () => {
   React.useEffect(() => {
     // Specify how to clean up after this effect:
@@ -56,9 +72,10 @@ const Basic = () => {
       setTC(false);
     }, 6000);
   };
-  const [createTask, { data }] = useMutation(create_Product);
+  const [createTask, { data: mutdata }] = useMutation(create_Product);
+  const { loading, error, data } = useQuery(categories);
   const classes = useStyles();
-
+  console.log(data);
   const name = ({ field, form, ...props }) => {
     return (
       <TextField
@@ -104,75 +121,94 @@ const Basic = () => {
   };
   return (
     <>
-      <Formik
-        initialValues={{ taskname: "", type: "", score: "", desc: "" }}
-        onSubmit={values => {
-          let { taskname, score, desc } = values;
-          createTask({
-            variables: {
-              name: taskname,
-              price: parseFloat(score),
-              description: desc
-            }
-          })
-            .then(({ data }) => {
-              //console.log(data.createTask.id);
-              localStorage.setItem("ProductID", data.createProduct.id);
-
-              setnotype("success");
-              showNotification();
+      {!loading ? (
+        <Formik
+          initialValues={{ taskname: "", score: "", desc: "", cat: "" }}
+          onSubmit={values => {
+            let { taskname, score, desc, cat } = values;
+            createTask({
+              variables: {
+                name: taskname,
+                price: parseFloat(score),
+                description: desc,
+                cat: cat
+              }
             })
-            .catch(function(e) {
-              console.log(e.message);
-              setnotype("danger");
+              .then(({ data }) => {
+                //console.log(data.createTask.id);
+                localStorage.setItem("ProductID", data.createProduct.id);
 
-              showNotification();
-            });
-          //console.log(data);
-        }}
-      >
-        {({ isSubmitting }) => (
-          <Form>
-            <div style={{ flexGrow: 1 }}>
-              <Grid container spacing={1}>
-                <Grid item xs={4}>
-                  <Field name="taskname" component={name} />
-                </Grid>
-                <Grid item xs={4}>
-                  <Field name="score" component={score} />
-                </Grid>
+                setnotype("success");
+                showNotification();
+              })
+              .catch(function(e) {
+                console.log(e.message);
+                setnotype("danger");
 
-                <Grid item xs={12}>
-                  <Field name="desc" component={desc} />
-                </Grid>
+                showNotification();
+              });
+            //console.log(data);
+          }}
+        >
+          {({ isSubmitting }) => (
+            <Form>
+              <div style={{ flexGrow: 1 }}>
+                <Grid container spacing={1}>
+                  <Grid item xs={4}>
+                    <Field name="taskname" component={name} />
+                  </Grid>
+                  <Grid item xs={4}>
+                    <Field name="score" component={score} />
+                  </Grid>
+                  <Grid item xs={4}>
+                    Choose category :
+                    <Field as="select" name="cat">
+                      {data.categories.map(cat => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </option>
+                      ))}
+                    </Field>
+                  </Grid>
 
-                <Grid item xs={12}>
-                  <Button color="primary" type="submit" disabled={isSubmitting}>
-                    {" "}
-                    Create Product
-                  </Button>
-                  <Snackbar
-                    place="tc"
-                    color={notype}
-                    icon={notype === "success" ? Done : ErrorOutline}
-                    message={
-                      notype === "success"
-                        ? "product created succesfuly"
-                        : "product creation failed"
-                    }
-                    open={tc}
-                    closeNotification={() => {
-                      console.log(notype);
-                      setTC(false);
-                    }}
-                    close
-                  />
+                  <Grid item xs={12}>
+                    <Field name="desc" component={desc} />
+                  </Grid>
+
+                  <Grid item xs={12}>
+                    <Button
+                      color="primary"
+                      type="submit"
+                      disabled={isSubmitting}
+                    >
+                      {" "}
+                      Create Product
+                    </Button>
+                    <Snackbar
+                      place="tc"
+                      color={notype}
+                      icon={notype === "success" ? Done : ErrorOutline}
+                      message={
+                        notype === "success"
+                          ? "product created succesfuly"
+                          : "product creation failed"
+                      }
+                      open={tc}
+                      closeNotification={() => {
+                        console.log(notype);
+                        setTC(false);
+                      }}
+                      close
+                    />
+                  </Grid>
                 </Grid>
-              </Grid>
-            </div>
-          </Form>
-        )}
-      </Formik>
+              </div>
+            </Form>
+          )}
+        </Formik>
+      ) : (
+        <></>
+      )}
     </>
   );
 };

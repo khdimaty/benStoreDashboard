@@ -6,7 +6,16 @@ import CircularProgress from "@material-ui/core/CircularProgress";
 import Button from "components/CustomButtons/Button.jsx";
 import { useQuery, useMutation } from "@apollo/react-hooks";
 import { gql } from "apollo-boost";
-
+import Select from "@material-ui/core/Select";
+import MenuItem from "@material-ui/core/MenuItem";
+const categories = gql`
+  query categories {
+    categories {
+      id
+      name
+    }
+  }
+`;
 const Product = gql`
   query product($id: ID!) {
     product(where: { id: $id }) {
@@ -14,7 +23,10 @@ const Product = gql`
       name
       price
       description
-      images
+      category {
+        id
+        name
+      }
     }
   }
 `;
@@ -24,10 +36,16 @@ const Update = gql`
     $name: String!
     $description: String!
     $price: Float!
+    $category: ID
   ) {
     updateProduct(
       where: { id: $id }
-      data: { name: $name, description: $description, price: $price }
+      data: {
+        name: $name
+        description: $description
+        price: $price
+        category: { connect: { id: $category } }
+      }
     ) {
       id
     }
@@ -38,6 +56,7 @@ export default function Modify({ id, refetch }) {
     variables: { id: id },
     fetchPolicy: "cache-and-network"
   });
+  const { loading: catLoading, data: catData } = useQuery(categories);
   const [mutate] = useMutation(Update);
   const [name, setName] = useState("");
   const [price, setPrice] = useState(0);
@@ -56,24 +75,48 @@ export default function Modify({ id, refetch }) {
       clearInterval(timer);
     };
   }, []);
+  const [cat, setCat] = React.useState("");
 
+  const handleChange = event => {
+    setCat(event.target.value);
+  };
+  console.log(cat);
   return (
     <>
       {!loading ? (
         <GridContainer>
-          <GridItem xs={6}>
+          <GridItem xs={4}>
             <TextField
               label="name"
               defaultValue={data.product ? data.product.name : " "}
               onChange={e => setName(e.target.value)}
             />
           </GridItem>
-          <GridItem xs={6}>
+          <GridItem xs={4}>
             <TextField
               label="Price"
               defaultValue={data.product ? data.product.price : " "}
               onChange={e => setPrice(parseFloat(e.target.value))}
             />
+          </GridItem>
+          <GridItem xs={4}>
+            Category
+            <Select
+              labelId="demo-simple-select-label"
+              id="demo-simple-select"
+              value={cat}
+              onChange={handleChange}
+            >
+              {!catLoading ? (
+                catData.categories.map(cat => (
+                  <MenuItem key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </MenuItem>
+                ))
+              ) : (
+                <></>
+              )}
+            </Select>
           </GridItem>
           <GridItem xs={12} style={{ marginTop: 30 }}>
             <TextField
@@ -101,7 +144,8 @@ export default function Modify({ id, refetch }) {
                     description:
                       description === ""
                         ? data.product.description
-                        : description
+                        : description,
+                    category: cat === "" ? data.product.category.id : cat
                   }
                 }).then(data => setdisable(false));
 

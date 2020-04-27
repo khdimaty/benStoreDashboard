@@ -2,6 +2,7 @@ import TableList from "views/TableList/TableList.js";
 import BagsPage from "views/TableList/bagsPage.js";
 import BagsPagen from "views/TableList/nonconfirmed";
 import AddProduct from "views/TableList/addproduct";
+import AddCategory from "views/TableList/addcategory";
 var dashRoutes = [
   {
     path: "/products",
@@ -29,10 +30,18 @@ var dashRoutes = [
   },
   {
     path: "/create",
-    name: "CreateProduct",
+    name: "Create Product",
     rtlName: "",
     icon: "create",
     component: AddProduct,
+    layout: "/admin"
+  },
+  {
+    path: "/createcat",
+    name: "Category",
+    rtlName: "",
+    icon: "",
+    component: AddCategory,
     layout: "/admin"
   }
 ];
