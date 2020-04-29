@@ -38,7 +38,7 @@ var dashRoutes = [
   },
   {
     path: "/createcat",
-    name: "Category",
+    name: "Settings",
     rtlName: "",
     icon: "",
     component: AddCategory,
